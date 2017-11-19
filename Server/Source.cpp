@@ -14,7 +14,7 @@
 int main(){
 
 	WSADATA wsaData;
-	WORD DllVersion = MAKEWORD(2, 2);
+	WORD word = MAKEWORD(2, 2);
 	SOCKADDR_IN address;
 	SOCKET serverSocket, clientSocket;
 	int backlog = 5; 
@@ -23,13 +23,13 @@ int main(){
 	int sendsize = 1024; 
 	char sendbuffer[1024];
 	std::map<char,int>counterLetter; 
-	if (WSAStartup(DllVersion, &wsaData) != 0) {
-		MessageBoxA(NULL, "Winsock startup failed", "Error", MB_OK | MB_ICONERROR);
+
+	if (WSAStartup(word, &wsaData) != 0) {
+		std::cout << "Error winsock" << std::endl; 
 		exit(1);
 	}
 
 	//Address to bind connection socket to
-	
 	inet_pton(AF_INET, "127.0.0.1", &(address.sin_addr));//address.sin_addr.s_addr = inet_addr("127.0.0.1"); // local host
 	address.sin_port = htons(5858); //port("HostToNetworkShort
 	address.sin_family = AF_INET; //IPv4
@@ -41,61 +41,60 @@ int main(){
 	listen(serverSocket, backlog); 
 
 	//Client socket 
+	int result = 0;
+
 	clientSocket = accept(serverSocket, (SOCKADDR*)&address, &addrlen); 
 	if (clientSocket == INVALID_SOCKET){
 		std::cout << "Client failed" << std::endl; 
 	}
 	else{
 		std::cout << "Client conected" << std::endl;
-		recv(clientSocket, recevbuffer, recvsize, 0);
-		std::cout << "Text from client: ";
-		for (int i = 0; i < recvsize; i++){
-			if (recevbuffer[i] != '#'){
-				std::cout << recevbuffer[i]; 
-			}
-		}
+		
+		result=recv(clientSocket, recevbuffer, sizeof(recevbuffer), 0);
+		std::cout << "Text from client: ";	
+		puts(recevbuffer);
+		
+				
 		// zliczanie liter w teksie 
-		for (int i = 0; i < recvsize; i++){
+		for (int i = 0; i < sizeof(recevbuffer); i++){
 			auto it = counterLetter.find(recevbuffer[i]);
-			
+			if (recevbuffer[i] != '\0'){
 				if (it == counterLetter.end()){
-					if (recevbuffer[i] != ' '){
+					if (recevbuffer[i] != 32 && recevbuffer[i] != 10 && recevbuffer[i] != 13 && recevbuffer[i] != 1){
 						counterLetter.emplace(recevbuffer[i], 1);
 					}
 				}
 				else{
-					if (recevbuffer[i] != ' '){
+					if (recevbuffer[i] != 32 && recevbuffer[i] != 10 && recevbuffer[i] != 13 && recevbuffer[i] != 1){
 						counterLetter[recevbuffer[i]]++;
 					}
 				}
-			
-		}
-		// uzuplnianie nowej tablicy
-		int i = 0;
-		std::vector<char>helpVector;
-		for (auto it = counterLetter.begin(); it != counterLetter.end(); ++it){
-			helpVector.push_back(it->first);
-			helpVector.push_back(it->second + 48);
-		}
-		int j = 0;
-		for (auto x : helpVector){
-			if (x != 0){
-				sendbuffer[j] = x;
-				j++;
 			}
 		}
-		for (int i = helpVector.size(); i < sendsize; i++){
-			sendbuffer[i] = '#'; 
+		// uzuplnianie nowej tablicy
+	
+		std::vector<char>data; 
+		for (auto it = counterLetter.begin(); it != counterLetter.end(); ++it){
+			data.push_back(it->first);
+			data.push_back(it->second + 48);
 		}
-		send(clientSocket, sendbuffer, sendsize, 0);
+		
+		
+		for (int i = 0; i <data.size(); i++){
+			sendbuffer[i] = data[i]; 
+		}
+		for (int i = data.size(); i < sendsize; i++){
+			sendbuffer[i] = '\0'; 
+		}
+		send(clientSocket, sendbuffer, sizeof(sendbuffer), 0);
 
 	}
 
 
-	if (shutdown(clientSocket, SD_BOTH) == 0){
-		std::cout << std::endl; 
-		std::cout << "Server shut down" << std::endl; 
-}
+	
+	if (result == 0) {
+		closesocket(serverSocket); 
+	}
 
 
 	std::cin.ignore(1); 

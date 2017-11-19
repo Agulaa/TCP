@@ -3,6 +3,7 @@
 #include<string>
 #include<map>
 #include<vector>
+#include<algorithm>
 
 #include <WinSock2.h>
 #include <WS2tcpip.h>
@@ -14,7 +15,7 @@
 int main(){
 
 	WSADATA wsaData;
-	WORD DllVersion = MAKEWORD(2, 2);
+	WORD word = MAKEWORD(2, 2);
 	SOCKADDR_IN address;
 	SOCKET serverSocket, clientSocket;
 	int sendsize = 512;
@@ -23,8 +24,8 @@ int main(){
 	char recevbuffer[1024]; 
 	
 
-	if (WSAStartup(DllVersion, &wsaData) != 0) {
-		MessageBoxA(NULL, "Winsock startup failed", "Error", MB_OK | MB_ICONERROR);
+	if (WSAStartup(word, &wsaData) != 0) {
+		std::cout << "Error winsock" << std::endl;
 		exit(1);
 	}
 
@@ -44,23 +45,20 @@ int main(){
 	std::cout << "Podaj tekst do przeslania" << std::endl;
 	std::string line;
 	std::getline(std::cin, line);
-	char text[512]; 
-	for (int i = 0; i < line.length();i++){
-		sendbuffer[i] =line[i];
+	line.erase(std::remove_if(line.begin(), line.end(), isspace), line.end()); 
+	for (int i = 0; i < line.size(); i++){
+		sendbuffer[i] = line[i]; 
 	}
-	
-	for (int i =line.length() ;i < sendsize; i++){
-		sendbuffer[i] = '#'; 
+	for (int i = line.size(); i < sendsize; i++){
+		sendbuffer[i] = '\0';
 	}
-	send(clientSocket, sendbuffer, sendsize, 0); 
-	recv(clientSocket, recevbuffer, recevsize, 0); 
+	send(clientSocket, sendbuffer, sizeof(sendbuffer), 0); 
+	recv(clientSocket, recevbuffer, sizeof(recevbuffer), 0); 
 	std::cout << "Text from server: "; 
-	for (int i = 0; i < recevsize; i++){
-		if (recevbuffer[i] != '#'){
-			std::cout << recevbuffer[i]; 
-		}
-	}
-
+	puts(recevbuffer); 
+	
+	
+	closesocket(clientSocket);
 	std::cin.ignore(1);
 	return 0;
 
